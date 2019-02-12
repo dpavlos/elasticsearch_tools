@@ -31,6 +31,7 @@ def get_fields(res):
             inner_field_type = fields[field]["type"]
             if (field, inner_field_type) not in list_of_field_types:
                 list_of_field_types.append((field, inner_field_type))
+    return list_of_field_types
 
 
 def get_legacy(res):
@@ -54,6 +55,7 @@ def get_legacy(res):
             inner_field_type = fields["mappings"][doc_type]["type"]
             if (doc_type, inner_field_type) not in list_of_field_types:
                 list_of_field_types.append((doc_type, inner_field_type))
+    return list_of_field_types
 
 
 def fetch_data():
@@ -70,8 +72,12 @@ def fetch_data():
 
 
 response = fetch_data().json()
+if version == '5':
+    types = get_legacy(response)
+if version == '6':
+    types = get_fields(response)
 
 with open('es_fields.' + version + '.csv', 'w') as f:
     csv_out = csv.writer(f)
-    for row in list_of_field_types:
+    for row in types:
         csv_out.writerow(row)
