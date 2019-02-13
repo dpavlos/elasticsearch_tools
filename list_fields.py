@@ -86,15 +86,20 @@ def fetch_version():
         sys.exit(1)
 
 
-response = fetch_data().json()
-version = fetch_version()
+def main():
+    response = fetch_data().json()
+    version = fetch_version()
 
-if version == '5':
-    types = get_fields_5(response)
-if version == '6':
-    types = get_fields_6(response)
+    if version == '5':
+        types = get_fields_5(response)
+    if version == '6':
+        types = get_fields_6(response)
 
-with open('es_fields.' + version + '.csv', 'w') as f:
-    csv_out = csv.writer(f)
-    for row in types:
-        csv_out.writerow(row)
+    with open('es_fields.' + version + '.csv', 'w') as f:
+        csv_out = csv.writer(f)
+        for row in types:
+            csv_out.writerow(row)
+
+
+if __name__ == '__main__':
+    main()
