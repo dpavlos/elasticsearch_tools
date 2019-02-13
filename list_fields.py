@@ -93,8 +93,12 @@ def main():
 
     if version == '5':
         types = get_fields_5(response)
-    if version == '6':
+    elif version == '6':
         types = get_fields_6(response)
+    else:
+        print "Not supported elasticseach version: " + version
+        sys.exit(1)
+
 
     with open('es_fields.' + version + '.csv', 'w') as f:
         csv_out = csv.writer(f)
