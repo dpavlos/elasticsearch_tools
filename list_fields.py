@@ -3,6 +3,7 @@
 import requests
 import sys
 import csv
+from operator import itemgetter
 
 source_host = 'http://localhost:9200'
 mappings = '/_mapping'
@@ -31,7 +32,7 @@ def get_fields_6(res):
             if (field, inner_field_type) not in list_of_field_types:
                 list_of_field_types.append((field, inner_field_type))
 
-    return list_of_field_types
+    return sorted(list_of_field_types, key=itemgetter(0))
 
 
 def get_fields_5(res):
@@ -55,7 +56,7 @@ def get_fields_5(res):
             inner_field_type = fields["mappings"][doc_type]["type"]
             if (doc_type, inner_field_type) not in list_of_field_types:
                 list_of_field_types.append((doc_type, inner_field_type))
-    return list_of_field_types
+    return sorted(list_of_field_types,itemgetter(0))
 
 
 def fetch_data():
