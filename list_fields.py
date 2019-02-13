@@ -7,11 +7,10 @@ import csv
 source_host = 'http://localhost:9200'
 mappings = '/_mapping'
 index = 'logstash-2019.02.10'
-version = '6'
 list_of_field_types = []
 
 
-def get_fields(res):
+def get_fields_6(res):
     fields = res[index]["mappings"]["_doc"]["properties"]
 
     for field in fields:
@@ -31,10 +30,11 @@ def get_fields(res):
             inner_field_type = fields[field]["type"]
             if (field, inner_field_type) not in list_of_field_types:
                 list_of_field_types.append((field, inner_field_type))
+
     return list_of_field_types
 
 
-def get_legacy(res):
+def get_fields_5(res):
     fields = res[index]["mappings"]
 
     for doc_type in fields:
@@ -71,11 +71,28 @@ def fetch_data():
         sys.exit(1)
 
 
+def fetch_version():
+    try:
+        rs = requests.get(source_host)
+        rs.raise_for_status()
+        data = rs.json()
+        ver = data['version']['number']
+        return ver.split('.')[0]
+    except requests.exceptions.HTTPError as http_error:
+        print http_error
+        sys.exit(1)
+    except requests.exceptions.RequestException as e:
+        print e
+        sys.exit(1)
+
+
 response = fetch_data().json()
+version = fetch_version()
+
 if version == '5':
-    types = get_legacy(response)
+    types = get_fields_5(response)
 if version == '6':
-    types = get_fields(response)
+    types = get_fields_6(response)
 
 with open('es_fields.' + version + '.csv', 'w') as f:
     csv_out = csv.writer(f)
