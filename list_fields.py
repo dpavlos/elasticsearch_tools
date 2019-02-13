@@ -3,16 +3,18 @@
 import requests
 import sys
 import csv
+import argparse
 from operator import itemgetter
 
-source_host = 'http://localhost:9200'
+__author__ = 'Pavlos Daoglou'
+
 mappings = '/_mapping'
-index = 'logstash-2019.02.10'
 list_of_field_types = []
 
 
-def get_fields_6(res):
-    fields = res[index]["mappings"]["_doc"]["properties"]
+def get_fields_6(res, ind):
+
+    fields = res[ind]["mappings"]["_doc"]["properties"]
 
     for field in fields:
         if "properties" in fields[field]:
@@ -35,8 +37,9 @@ def get_fields_6(res):
     return sorted(list_of_field_types, key=itemgetter(0))
 
 
-def get_fields_5(res):
-    fields = res[index]["mappings"]
+def get_fields_5(res,ind):
+
+    fields = res[ind]["mappings"]
 
     for doc_type in fields:
         if "properties" in fields["mappings"][doc_type]:
@@ -59,9 +62,10 @@ def get_fields_5(res):
     return sorted(list_of_field_types,itemgetter(0))
 
 
-def fetch_data():
+def fetch_data(s, t):
+
     try:
-        source = requests.get(source_host + mappings)
+        source = requests.get(s + mappings, timeout=t)
         source.raise_for_status()
         return source
     except requests.exceptions.HTTPError as http_error:
@@ -72,9 +76,10 @@ def fetch_data():
         sys.exit(1)
 
 
-def fetch_version():
+def fetch_version(s, t):
+
     try:
-        rs = requests.get(source_host)
+        rs = requests.get(s, timeout=t)
         rs.raise_for_status()
         data = rs.json()
         ver = data['version']['number']
@@ -88,19 +93,30 @@ def fetch_version():
 
 
 def main():
-    response = fetch_data().json()
-    version = fetch_version()
+
+    parser = argparse.ArgumentParser(description="Fetch a sorted list of fields from a specific index")
+    parser.add_argument('-s', '--source', help='Source host with port eg. "http://host:9200"', required=True)
+    parser.add_argument('-i', '--index', help='Index name', required=True)
+    parser.add_argument('-t', '--timeout', help='Timeout in seconds - Default: 10', type=int, required=False,
+                        default=10)
+    parser.add_argument('-o', '--output', help='Output file name - Default: es_fields.ES_VERSION.csv', required=False)
+    args = parser.parse_args()
+
+    response = fetch_data(args.source, args.timeout).json()
+    version = fetch_version(args.source, args.timeout)
 
     if version == '5':
-        types = get_fields_5(response)
+        types = get_fields_5(response, args.index)
     elif version == '6':
-        types = get_fields_6(response)
+        types = get_fields_6(response, args.index)
     else:
         print "Not supported elasticseach version: " + version
         sys.exit(1)
 
+    if args.output is None:
+        args.output = 'es_fields.' + version + '.csv'
 
-    with open('es_fields.' + version + '.csv', 'w') as f:
+    with open(args.output, 'w') as f:
         csv_out = csv.writer(f)
         for row in types:
             csv_out.writerow(row)
