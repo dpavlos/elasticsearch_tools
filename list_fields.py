@@ -8,64 +8,41 @@ from operator import itemgetter
 
 __author__ = 'Pavlos Daoglou'
 
-mappings = '/_mapping'
 list_of_field_types = []
 
 
-def get_fields_6(res, ind):
+def get_fields(res, ind, v):
 
-    fields = res[ind]["mappings"]["_doc"]["properties"]
+    if v == '5':
+        fields = res[ind]["mappings"]
+    if v == '6':
+        fields = res[ind]["mappings"]["_doc"]["properties"]
 
-    for field in fields:
-        if "properties" in fields[field]:
-            for one_level_field in fields[field]["properties"]:
-                if "properties" in fields[field]["properties"][one_level_field]:
-                    for second_level_field in fields[field]["properties"][one_level_field]["properties"]:
-                        inner_field_type = \
-                            fields[field]["properties"][one_level_field]["properties"][second_level_field]["type"]
-                        if (one_level_field, second_level_field, inner_field_type) not in list_of_field_types:
-                            list_of_field_types.append((one_level_field, second_level_field, inner_field_type))
+    for doc_type in fields:
+        if "properties" in fields[doc_type]:
+            for field in fields[doc_type]["properties"]:
+                if "properties" in fields[doc_type]["properties"][field]:
+                    for inner_field in fields[doc_type]["properties"][field]["properties"]:
+                        field_type = \
+                            fields[doc_type]["properties"][field]["properties"][
+                                inner_field]["type"]
+                        if (field, inner_field, field_type) not in list_of_field_types:
+                            list_of_field_types.append((field, inner_field, field_type))
                 else:
-                    inner_field_type = fields[field]["properties"][one_level_field]["type"]
-                    if (one_level_field, inner_field_type) not in list_of_field_types:
-                        list_of_field_types.append((one_level_field, inner_field_type))
+                    field_type = fields[doc_type]["properties"][field]["type"]
+                    if (field, field_type) not in list_of_field_types:
+                        list_of_field_types.append((field, field_type))
         else:
-            inner_field_type = fields[field]["type"]
-            if (field, inner_field_type) not in list_of_field_types:
-                list_of_field_types.append((field, inner_field_type))
-
+            field_type = fields[doc_type]["type"]
+            if (doc_type, field_type) not in list_of_field_types:
+                list_of_field_types.append((doc_type, field_type))
     return sorted(list_of_field_types, key=itemgetter(0))
 
 
-def get_fields_5(res,ind):
-
-    fields = res[ind]["mappings"]
-
-    for doc_type in fields:
-        if "properties" in fields["mappings"][doc_type]:
-            for one_level_field in fields[doc_type]["properties"]:
-                if "properties" in fields[doc_type]["properties"][one_level_field]:
-                    for second_level_field in fields[doc_type]["properties"][one_level_field]["properties"]:
-                        inner_field_type = \
-                            fields[doc_type]["properties"][one_level_field]["properties"][
-                                second_level_field]["type"]
-                        if (one_level_field, second_level_field, inner_field_type) not in list_of_field_types:
-                            list_of_field_types.append((one_level_field, second_level_field, inner_field_type))
-                else:
-                    inner_field_type = fields[doc_type]["properties"][one_level_field]["type"]
-                    if (one_level_field, inner_field_type) not in list_of_field_types:
-                        list_of_field_types.append((one_level_field, inner_field_type))
-        else:
-            inner_field_type = fields["mappings"][doc_type]["type"]
-            if (doc_type, inner_field_type) not in list_of_field_types:
-                list_of_field_types.append((doc_type, inner_field_type))
-    return sorted(list_of_field_types,itemgetter(0))
-
-
-def fetch_data(s, t):
+def fetch_data(s, i, t):
 
     try:
-        source = requests.get(s + mappings, timeout=t)
+        source = requests.get(s + '/' + i + '/_mapping', timeout=t)
         source.raise_for_status()
         return source
     except requests.exceptions.HTTPError as http_error:
@@ -102,13 +79,11 @@ def main():
     parser.add_argument('-o', '--output', help='Output file name - Default: es_fields.ES_VERSION.csv', required=False)
     args = parser.parse_args()
 
-    response = fetch_data(args.source, args.timeout).json()
+    response = fetch_data(args.source, args.index, args.timeout).json()
     version = fetch_version(args.source, args.timeout)
 
-    if version == '5':
-        types = get_fields_5(response, args.index)
-    elif version == '6':
-        types = get_fields_6(response, args.index)
+    if version == '5' or version == '6':
+        types = get_fields(response, args.index, version)
     else:
         print "Not supported elasticseach version: " + version
         sys.exit(1)
