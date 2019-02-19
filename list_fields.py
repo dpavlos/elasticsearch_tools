@@ -11,29 +11,29 @@ __author__ = 'Pavlos Daoglou'
 list_of_field_types = []
 
 
-def get_fields(res, ind, v):
+def get_fields(res, v):
 
-    if v == '5':
-        fields = res[ind]["mappings"]
-    if v == '6':
-        fields = res[ind]["mappings"]["_doc"]["properties"]
-
-    for doc_type in fields:
-        if "properties" in fields[doc_type]:
-            for field in fields[doc_type]["properties"]:
-                if "properties" in fields[doc_type]["properties"][field]:
-                    for inner_field in fields[doc_type]["properties"][field]["properties"]:
+    for doc_type in res:
+        if "properties" in res[doc_type]:
+            for field in res[doc_type]["properties"]:
+                if "properties" in res[doc_type]["properties"][field]:
+                    for inner_field in res[doc_type]["properties"][field]["properties"]:
                         field_type = \
-                            fields[doc_type]["properties"][field]["properties"][
+                            res[doc_type]["properties"][field]["properties"][
                                 inner_field]["type"]
                         if (field, inner_field, field_type) not in list_of_field_types:
                             list_of_field_types.append((field, inner_field, field_type))
                 else:
-                    field_type = fields[doc_type]["properties"][field]["type"]
-                    if (field, field_type) not in list_of_field_types:
-                        list_of_field_types.append((field, field_type))
+                    field_type = res[doc_type]["properties"][field]["type"]
+                    if v == '5':
+                        if (field, field_type) not in list_of_field_types:
+                            list_of_field_types.append((field, field_type))
+                    if v == '6':
+                        if (doc_type, field, field_type) not in list_of_field_types:
+                            list_of_field_types.append((doc_type, field, field_type))
+
         else:
-            field_type = fields[doc_type]["type"]
+            field_type = res[doc_type]["type"]
             if (doc_type, field_type) not in list_of_field_types:
                 list_of_field_types.append((doc_type, field_type))
     return sorted(list_of_field_types, key=itemgetter(0))
@@ -82,8 +82,10 @@ def main():
     response = fetch_data(args.source, args.index, args.timeout).json()
     version = fetch_version(args.source, args.timeout)
 
-    if version == '5' or version == '6':
-        types = get_fields(response, args.index, version)
+    if version == '5':
+        types = get_fields(response[args.index]["mappings"], version)
+    elif version == '6':
+        types = get_fields(response[args.index]["mappings"]["_doc"]["properties"], version)
     else:
         print "Not supported elasticseach version: " + version
         sys.exit(1)
